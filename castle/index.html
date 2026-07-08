@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>わたしの城めぐり 🏯</title>
+<style>
+  :root{
+    --bg:#fff8f2; --panel:#ffffff; --ink:#5b4a42; --sub:#9b8a80;
+    --line:#f0e2d8; --soft:#fdeee6;
+    --p100:#ff9db0; --p100bg:#ffe7ec;
+    --pzoku:#7fd0a0; --pzokubg:#e2f6ec;
+    --pbangai:#bfa4e8; --pbangaibg:#efe7fb;
+    --peach:#ffcf9e; --peachbg:#fff0df;
+    --mint:#8fd9c0; --mintbg:#e6f7f1;
+    --grey:#efe7e1; --greytx:#c3b4aa;
+    --accent:#ff8fab;
+    --shadow:0 6px 18px rgba(180,140,120,.14);
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Hiragino Maru Gothic ProN","ヒラギノ丸ゴ ProN W4",system-ui,"Yu Gothic",sans-serif;
+    -webkit-font-smoothing:antialiased; line-height:1.6;
+  }
+  .wrap{max-width:960px; margin:0 auto; padding:16px 14px 60px}
+  header.top{
+    text-align:center; padding:22px 12px 14px;
+    background:linear-gradient(135deg,#ffe3ec 0%,#f3e7ff 100%);
+    border-radius:0 0 26px 26px; box-shadow:var(--shadow); margin-bottom:14px;
+  }
+  header.top h1{margin:0; font-size:1.5rem; letter-spacing:.02em}
+  header.top .sub{color:var(--sub); font-size:.82rem; margin-top:4px}
+  .stats{display:flex; gap:10px; justify-content:center; margin-top:12px; flex-wrap:wrap}
+  .stat{background:#fff; border-radius:16px; padding:8px 16px; box-shadow:var(--shadow); font-size:.9rem}
+  .stat b{font-size:1.25rem; color:var(--accent); margin-right:3px}
+
+  .tabs{display:flex; gap:8px; justify-content:center; margin:6px 0 16px}
+  .tab{
+    border:none; cursor:pointer; font:inherit; font-weight:700;
+    padding:10px 20px; border-radius:999px; background:#fff; color:var(--sub);
+    box-shadow:var(--shadow); transition:.15s;
+  }
+  .tab.active{background:linear-gradient(135deg,#ff9db0,#c9a3f0); color:#fff}
+
+  .legend{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:2px 0 14px; font-size:.78rem; color:var(--sub)}
+  .legend span{display:inline-flex; align-items:center; gap:5px}
+  .dot{width:12px; height:12px; border-radius:50%; display:inline-block}
+
+  .map{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:13px}
+  .region{background:var(--panel); border-radius:20px; padding:12px 12px 14px; box-shadow:var(--shadow)}
+  .region h3{margin:2px 4px 10px; font-size:.92rem; color:var(--sub); font-weight:700}
+  .tiles{display:flex; flex-wrap:wrap; gap:7px}
+  .tile{
+    position:relative; min-width:52px; text-align:center; cursor:pointer;
+    padding:9px 8px; border-radius:13px; font-size:.82rem; font-weight:700;
+    background:var(--grey); color:var(--greytx); user-select:none; transition:.12s;
+    border:2px solid transparent;
+  }
+  .tile:active{transform:scale(.94)}
+  /* castle mode */
+  .tile.has{background:var(--peachbg); color:#b9743e; border-color:#ffd9b3}
+  .tile .badge{
+    position:absolute; top:-7px; right:-7px; background:var(--accent); color:#fff;
+    font-size:.66rem; min-width:18px; height:18px; line-height:18px; border-radius:10px; padding:0 4px;
+    box-shadow:0 2px 6px rgba(255,143,171,.5);
+  }
+  /* pref mode */
+  .tile.visited{background:var(--mintbg); color:#2f9e77; border-color:#a9e6cf}
+  .tile.visited::after{content:"✓"; margin-left:3px; font-size:.72rem}
+
+  .bar{height:12px; background:var(--soft); border-radius:999px; overflow:hidden; margin:4px 0 2px}
+  .bar>i{display:block; height:100%; background:linear-gradient(90deg,#8fd9c0,#7fd0a0); border-radius:999px; transition:width .3s}
+  .prog{max-width:520px; margin:0 auto 16px; background:#fff; padding:14px 18px; border-radius:18px; box-shadow:var(--shadow)}
+  .prog .lab{display:flex; justify-content:space-between; font-size:.85rem; color:var(--sub)}
+  .prog .lab b{color:#2f9e77; font-size:1.05rem}
+  .hint{text-align:center; color:var(--sub); font-size:.76rem; margin-top:4px}
+
+  /* modal */
+  .ov{position:fixed; inset:0; background:rgba(90,74,66,.38); display:none; align-items:flex-end; justify-content:center; z-index:50; padding:0}
+  .ov.show{display:flex}
+  .sheet{
+    background:var(--bg); width:100%; max-width:620px; border-radius:24px 24px 0 0;
+    padding:8px 16px 26px; max-height:88vh; overflow:auto; box-shadow:0 -8px 30px rgba(0,0,0,.15);
+    animation:up .22s ease;
+  }
+  @keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+  .grip{width:44px; height:5px; background:#e6d5ca; border-radius:9px; margin:8px auto 12px}
+  .sheet h2{margin:0 4px 12px; font-size:1.15rem; display:flex; align-items:center; gap:8px}
+  .close{margin-left:auto; border:none; background:#fff; width:34px; height:34px; border-radius:50%; box-shadow:var(--shadow); cursor:pointer; font-size:1rem; color:var(--sub)}
+
+  .card{background:#fff; border-radius:18px; overflow:hidden; box-shadow:var(--shadow); margin-bottom:14px}
+  .card .ph{width:100%; aspect-ratio:16/10; object-fit:cover; display:block; background:var(--soft)}
+  .card .ph.empty{display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px; color:var(--greytx); cursor:pointer; font-size:.85rem}
+  .card .ph.empty .big{font-size:2.2rem}
+  .card .body{padding:12px 14px 14px}
+  .card .name{font-size:1.08rem; font-weight:800; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+  .chip{font-size:.66rem; font-weight:800; padding:3px 9px; border-radius:999px; color:#fff}
+  .chip.c100{background:var(--p100)} .chip.czoku{background:var(--pzoku)} .chip.cbangai{background:var(--pbangai)}
+  .card .kt{margin:7px 0 12px; font-size:.9rem; color:#6b584e}
+  .btns{display:flex; gap:8px; flex-wrap:wrap}
+  .btn{font:inherit; font-size:.8rem; font-weight:700; border:none; cursor:pointer; padding:8px 14px; border-radius:999px; text-decoration:none; display:inline-flex; align-items:center; gap:5px}
+  .btn.note{background:var(--p100bg); color:#d15f78}
+  .btn.note.off{background:#f2ece8; color:var(--greytx); cursor:default}
+  .btn.add{background:var(--mintbg); color:#2f9e77}
+  .btn.edit{background:var(--peachbg); color:#c07d3c}
+  footer{text-align:center; color:var(--sub); font-size:.74rem; margin-top:26px}
+  .pill{display:inline-block; background:#fff; border-radius:999px; padding:3px 10px; box-shadow:var(--shadow); margin:2px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>🏯 わたしの城めぐり</h1>
+    <div class="sub">〜 訪れたお城と、制覇した都道府県の記録 〜</div>
+    <div class="stats">
+      <div class="stat"><b id="stCastle">0</b>城</div>
+      <div class="stat"><b id="stPref">0</b>都道府県</div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="castle">🏯 城マップ</button>
+    <button class="tab" data-tab="pref">🗾 制覇マップ</button>
+  </div>
+
+  <!-- CASTLE TAB -->
+  <section id="tab-castle">
+    <div class="legend">
+      <span><i class="dot" style="background:var(--p100)"></i>日本100名城</span>
+      <span><i class="dot" style="background:var(--pzoku)"></i>続日本100名城</span>
+      <span><i class="dot" style="background:var(--pbangai)"></i>番外編</span>
+      <span style="color:#b9743e">🏯のある県をタップ</span>
+    </div>
+    <div class="map" id="mapCastle"></div>
+  </section>
+
+  <!-- PREF TAB -->
+  <section id="tab-pref" style="display:none">
+    <div class="prog">
+      <div class="lab"><span>都道府県 制覇</span><span><b id="pvCount">0</b> / 47</span></div>
+      <div class="bar"><i id="pvBar" style="width:0%"></i></div>
+      <div class="hint">タップで「行った / まだ」を切り替えできます（自動保存）</div>
+    </div>
+    <div class="map" id="mapPref"></div>
+  </section>
+
+  <footer>
+    made with 🩷 for お城めぐり<br>
+    <span class="pill">写真のない城はカードの「＋写真を追加」から入れられます</span>
+  </footer>
+</div>
+
+<div class="ov" id="ov"><div class="sheet"><div class="grip"></div>
+  <h2><span id="ovTitle"></span><button class="close" id="ovClose">✕</button></h2>
+  <div id="ovBody"></div>
+</div></div>
+
+<script>
+/* ====== ここだけ設定 ====== */
+/* あなたのnoteのユーザー名(ID)を入れると、各城に「note記事を読む」ボタンが有効になります。
+   例：プロフィールURLが https://note.com/mameyuru なら "mameyuru" と入れてください。
+   ※記事を公開したあとにリンクが開けるようになります。 */
+const NOTE_USER = "";
+/* ========================= */
+
+const CAT = {
+  '100':   {label:'日本100名城',  cls:'c100'},
+  'zoku':  {label:'続日本100名城',cls:'czoku'},
+  'bangai':{label:'番外編',       cls:'cbangai'},
+};
+
+const CASTLES = [
+  {n:'多賀城', p:'宮城', c:'100', img:null, note:null, k:'奈良時代、東北を治めた古代の城柵。陸奥国府と鎮守府が置かれた政治の中心。'},
+  {n:'仙台城', p:'宮城', c:'100', img:null, note:null, k:'伊達政宗が築いた「青葉城」。断崖の上から仙台の街を見晴らす。'},
+  {n:'水戸城', p:'茨城', c:'100', img:null, note:null, k:'徳川御三家・水戸徳川家の居城。日本最大級の空堀と土塁が残る。'},
+  {n:'鉢形城', p:'埼玉', c:'100', img:'hachigata', note:'n4b65ac58fd09', k:'荒川の断崖に築かれた北条氏の堅城。復元された四脚門が出迎えてくれる。'},
+  {n:'川越城', p:'埼玉', c:'100', img:'kawagoe', note:'nf3bf0193ed57', k:'全国でも数少ない本丸御殿が現存する、小江戸・川越のお城。'},
+  {n:'江戸城', p:'東京', c:'100', img:null, note:null, k:'いまの皇居。徳川将軍家の巨大な城で、雄大な石垣と堀が今も壮観。'},
+  {n:'八王子城', p:'東京', c:'100', img:'hachioji', note:'nd856b7de36ba', k:'北条氏照の山城。復元された曳橋と御主殿跡が往時をしのばせる。'},
+  {n:'小田原城', p:'神奈川', c:'100', img:null, note:null, k:'難攻不落を誇った北条氏の本拠。城下町ごと囲う総構えの巨大城郭。'},
+  {n:'武田氏館', p:'山梨', c:'100', img:'takeda', note:'n1653c186aecb', k:'武田信玄の館「躑躅ヶ崎館」。いまは武田神社として親しまれる。'},
+  {n:'甲府城', p:'山梨', c:'100', img:null, note:null, k:'武田氏のあとに築かれた石垣の城。甲府の街なかに立派な石積みが残る。'},
+  {n:'山中城', p:'静岡', c:'100', img:'yamanaka', note:'n16beb21896ee', k:'障子堀・畝堀が美しい北条流の土の城。ワッフルみたいな堀は必見。'},
+  {n:'彦根城', p:'滋賀', c:'100', img:'hikone', note:'n0a1a82125efd', k:'現存12天守のひとつで国宝。ひこにゃんに会える井伊家のお城。'},
+  {n:'安土城', p:'滋賀', c:'100', img:'azuchi', note:'nb6ceb5f5ea75', k:'織田信長が夢を込めた幻の天主。まっすぐ伸びる大手道の石段が圧巻。'},
+  {n:'観音寺城', p:'滋賀', c:'100', img:null, note:null, k:'六角氏が繖山に築いた巨大山城。石垣を多用した先進的な城として名高い。'},
+  {n:'二条城', p:'京都', c:'100', img:null, note:null, k:'徳川家の京の拠点。大政奉還の舞台で、豪華な二の丸御殿が現存。'},
+  {n:'徳島城', p:'徳島', c:'100', img:null, note:null, k:'蜂須賀家の城。城山の石垣と、緑がまぶしい表御殿庭園が見どころ。'},
+  {n:'高松城', p:'香川', c:'100', img:null, note:null, k:'瀬戸内海の海水を堀に引き込んだ、日本三大水城のひとつ。'},
+  {n:'丸亀城', p:'香川', c:'100', img:null, note:null, k:'「石垣の名城」。日本一高い石垣の上に、小さな現存天守がちょこん。'},
+  {n:'高知城', p:'高知', c:'100', img:null, note:null, k:'天守も御殿もそろって現存する貴重なお城。山内一豊が築いた土佐の城。'},
+  {n:'忍城', p:'埼玉', c:'zoku', img:'oshi', note:'n589731bc5d6f', k:'石田三成の水攻めにも耐えた「浮き城」。青空に映える御三階櫓が目印。'},
+  {n:'杉山城', p:'埼玉', c:'zoku', img:'sugiyama', note:'n93b71eb40b85', k:'「土の城の教科書」と称される縄張りの傑作。技巧的な空堀が美しい。'},
+  {n:'菅谷館', p:'埼玉', c:'zoku', img:'sugaya', note:'nbd1c81828f15', k:'鎌倉武士の鑑・畠山重忠ゆかりの館跡。重忠公の像と土塁が出迎える。'},
+  {n:'滝山城', p:'東京', c:'zoku', img:null, note:null, k:'北条氏の巨大な土の城。大堀切や馬出など、土の防御が教科書的に残る。'},
+  {n:'品川台場', p:'東京', c:'zoku', img:null, note:null, k:'黒船に備えて幕末に築かれた海上の砲台。いまはお台場のシンボル。'},
+  {n:'小机城', p:'神奈川', c:'zoku', img:null, note:null, k:'横浜に残る北条氏の支城。竹林におおわれた空堀と土塁が心地よい。'},
+  {n:'石垣山城', p:'神奈川', c:'zoku', img:'ishigakiyama', note:'ne12ce90a1d60', k:'秀吉が小田原攻めで築いた「一夜城」。関東初の総石垣の城。'},
+  {n:'八幡山城', p:'滋賀', c:'zoku', img:'hachimanyama', note:'nef0b49d819fb', k:'豊臣秀次が築いた山城。山頂からは琵琶湖と近江八幡の町を一望。'},
+  {n:'勝瑞城', p:'徳島', c:'zoku', img:null, note:null, k:'阿波を治めた三好氏の本拠。戦国の館跡が静かに広がる平城。'},
+  {n:'一宮城', p:'徳島', c:'zoku', img:null, note:null, k:'阿波最大の山城。長宗我部と激しく争った、石垣の残る要害。'},
+  {n:'引田城', p:'香川', c:'zoku', img:null, note:null, k:'瀬戸内を見張る海の城。港町・引田を見下ろす石垣の岬の城。'},
+  {n:'岡豊城', p:'高知', c:'zoku', img:null, note:null, k:'土佐の英雄・長宗我部氏が四国制覇の拠点とした山城。'},
+  {n:'佐和山城', p:'滋賀', c:'bangai', img:'sawayama', note:'n83dc1539c817', k:'石田三成の居城跡。「三成に過ぎたるもの」と謳われた名城の面影。'},
+  {n:'浦戸城', p:'高知', c:'bangai', img:null, note:null, k:'長宗我部氏が最後に築いた城。桂浜を見下ろす海辺の地に立つ。'},
+];
+
+const REGIONS = [
+  {name:'北海道',     prefs:['北海道']},
+  {name:'東北',       prefs:['青森','岩手','宮城','秋田','山形','福島']},
+  {name:'関東',       prefs:['茨城','栃木','群馬','埼玉','千葉','東京','神奈川']},
+  {name:'中部',       prefs:['新潟','富山','石川','福井','山梨','長野','岐阜','静岡','愛知']},
+  {name:'近畿',       prefs:['三重','滋賀','京都','大阪','兵庫','奈良','和歌山']},
+  {name:'中国',       prefs:['鳥取','島根','岡山','広島','山口']},
+  {name:'四国',       prefs:['徳島','香川','愛媛','高知']},
+  {name:'九州・沖縄', prefs:['福岡','佐賀','長崎','熊本','大分','宮崎','鹿児島','沖縄']},
+];
+
+const VISITED_SEED = ['青森','岩手','宮城','秋田','山形','福島','茨城','栃木','群馬','埼玉','千葉','東京','神奈川','新潟','山梨','長野','静岡','愛知','滋賀','京都','大阪','兵庫','奈良','岡山','広島','山口','徳島','香川','高知','長崎','沖縄'];
+
+/* ---- storage ---- */
+const LS = {
+  pref:'castleapp.pref.v1',
+  photo:n=>'castleapp.photo.'+n,
+  kotoba:n=>'castleapp.kotoba.'+n,
+};
+function loadPref(){
+  try{const v=JSON.parse(localStorage.getItem(LS.pref)); if(Array.isArray(v)) return new Set(v);}catch(e){}
+  return new Set(VISITED_SEED);
+}
+let visited = loadPref();
+function savePref(){ localStorage.setItem(LS.pref, JSON.stringify([...visited])); }
+function getPhoto(n){ return localStorage.getItem(LS.photo(n)); }
+function getKotoba(c){ return localStorage.getItem(LS.kotoba(c.n)) || c.k; }
+
+/* castles grouped by pref */
+const byPref = {};
+CASTLES.forEach(c=>{ (byPref[c.p]=byPref[c.p]||[]).push(c); });
+
+/* ---- render maps ---- */
+function tileEl(pref, mode){
+  const t=document.createElement('div'); t.className='tile'; t.textContent=pref;
+  if(mode==='castle'){
+    const list=byPref[pref];
+    if(list){ t.classList.add('has'); const b=document.createElement('span'); b.className='badge'; b.textContent='🏯'+list.length; t.appendChild(b);
+      t.onclick=()=>openPref(pref); }
+    else t.style.cursor='default';
+  }else{
+    if(visited.has(pref)) t.classList.add('visited');
+    t.onclick=()=>{ visited.has(pref)?visited.delete(pref):visited.add(pref); savePref(); t.classList.toggle('visited'); updatePrefStats(); };
+  }
+  return t;
+}
+function renderMap(elId, mode){
+  const wrap=document.getElementById(elId); wrap.innerHTML='';
+  REGIONS.forEach(r=>{
+    const card=document.createElement('div'); card.className='region';
+    const h=document.createElement('h3'); h.textContent=r.name; card.appendChild(h);
+    const tiles=document.createElement('div'); tiles.className='tiles';
+    r.prefs.forEach(p=> tiles.appendChild(tileEl(p,mode)) );
+    card.appendChild(tiles); wrap.appendChild(card);
+  });
+}
+
+/* ---- castle sheet ---- */
+function noteBtn(c){
+  if(!c.note) return '';
+  if(NOTE_USER) return '<a class="btn note" target="_blank" rel="noopener" href="https://note.com/'+NOTE_USER+'/n/'+c.note+'">📖 note記事を読む</a>';
+  return '<span class="btn note off" title="上の NOTE_USER を設定し、記事を公開するとリンクが有効になります">📖 note（準備中）</span>';
+}
+function cardEl(c){
+  const card=document.createElement('div'); card.className='card';
+  const stored=getPhoto(c.n);
+  const src = stored || (c.img? 'images/'+c.img+'.jpg' : null);
+  if(src){
+    const im=document.createElement('img'); im.className='ph'; im.src=src; im.alt=c.n; card.appendChild(im);
+  }else{
+    const box=document.createElement('div'); box.className='ph empty';
+    box.innerHTML='<div class="big">🏯</div><div>＋写真を追加</div>';
+    box.onclick=()=>pickPhoto(c.n);
+    card.appendChild(box);
+  }
+  const body=document.createElement('div'); body.className='body';
+  body.innerHTML =
+    '<div class="name">'+c.n+' <span class="chip '+CAT[c.c].cls+'">'+CAT[c.c].label+'</span></div>'+
+    '<div class="kt">'+getKotoba(c)+'</div>';
+  const btns=document.createElement('div'); btns.className='btns';
+  btns.innerHTML = noteBtn(c)
+    + '<button class="btn add" data-act="photo">'+(src?'🖼 写真を変更':'＋写真を追加')+'</button>'
+    + '<button class="btn edit" data-act="kotoba">✏️ 一言を直す</button>';
+  btns.querySelector('[data-act="photo"]').onclick=()=>pickPhoto(c.n);
+  btns.querySelector('[data-act="kotoba"]').onclick=()=>editKotoba(c);
+  body.appendChild(btns); card.appendChild(body);
+  return card;
+}
+function openPref(pref){
+  document.getElementById('ovTitle').textContent='📍 '+pref+' の城（'+byPref[pref].length+'）';
+  const body=document.getElementById('ovBody'); body.innerHTML='';
+  byPref[pref].forEach(c=> body.appendChild(cardEl(c)) );
+  document.getElementById('ov').classList.add('show');
+  currentPref=pref;
+}
+let currentPref=null;
+function refreshSheet(){ if(currentPref && document.getElementById('ov').classList.contains('show')) openPref(currentPref); }
+
+/* photo picker with downscale */
+function pickPhoto(name){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
+    const rd=new FileReader(); rd.onload=()=>{ const img=new Image(); img.onload=()=>{
+      const max=1100, sc=Math.min(1, max/Math.max(img.width,img.height));
+      const cv=document.createElement('canvas'); cv.width=img.width*sc; cv.height=img.height*sc;
+      cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+      try{ localStorage.setItem(LS.photo(name), cv.toDataURL('image/jpeg',0.82)); refreshSheet(); }
+      catch(e){ alert('写真が大きすぎて保存できませんでした。もう少し小さい画像でお試しください🙏'); }
+    }; img.src=rd.result; }; rd.readAsDataURL(f);
+  };
+  inp.click();
+}
+function editKotoba(c){
+  const cur=getKotoba(c);
+  const v=prompt(c.n+' の一言（あなたの感想に直せます）', cur);
+  if(v===null) return;
+  if(v.trim()==='' || v===c.k) localStorage.removeItem(LS.kotoba(c.n));
+  else localStorage.setItem(LS.kotoba(c.n), v.trim());
+  refreshSheet();
+}
+
+/* ---- stats & tabs ---- */
+function updatePrefStats(){
+  const n=visited.size; document.getElementById('pvCount').textContent=n;
+  document.getElementById('pvBar').style.width=(n/47*100)+'%';
+  document.getElementById('stPref').textContent=n;
+}
+document.getElementById('stCastle').textContent=CASTLES.length;
+document.getElementById('ovClose').onclick=()=>document.getElementById('ov').classList.remove('show');
+document.getElementById('ov').onclick=e=>{ if(e.target.id==='ov') document.getElementById('ov').classList.remove('show'); };
+document.querySelectorAll('.tab').forEach(b=> b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+  const t=b.dataset.tab;
+  document.getElementById('tab-castle').style.display = t==='castle'?'':'none';
+  document.getElementById('tab-pref').style.display   = t==='pref'?'':'none';
+});
+
+/* init */
+renderMap('mapCastle','castle');
+renderMap('mapPref','pref');
+updatePrefStats();
+</script>
+</body>
+</html>
