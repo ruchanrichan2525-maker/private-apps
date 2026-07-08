@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Dラインマップ">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f172a">
+<title>一橋Dラインマップ</title>
+<style>
+  :root{
+    --bg: #0f172a;
+    --bg-elev: #161f36;
+    --bg-elev2: #1c2542;
+    --border: #2a3556;
+    --text: #e7ecf7;
+    --text-dim: #97a2c0;
+    --text-faint: #6b7594;
+    --accent: #4f8cff;
+    --accent-soft: rgba(79,140,255,0.15);
+    --green: #34d399;
+    --green-soft: rgba(52,211,153,0.15);
+    --yellow: #fbbf24;
+    --yellow-soft: rgba(251,191,36,0.15);
+    --gray: #4b5470;
+    --gray-soft: rgba(75,84,112,0.25);
+    --red: #f87171;
+    --radius: 14px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{
+    margin:0; padding:0; height:100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+  #app{
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100%;
+    padding-top: calc(var(--safe-top) + 14px);
+    padding-bottom: calc(64px + var(--safe-bottom) + 20px);
+  }
+  header.top{
+    padding: 0 16px 12px;
+    display:flex; align-items:baseline; justify-content:space-between;
+  }
+  header.top h1{
+    font-size: 18px; margin:0; font-weight: 800; letter-spacing: 0.02em;
+  }
+  header.top .sub{
+    font-size: 11px; color: var(--text-faint);
+  }
+  main{ padding: 0 16px; }
+  section.screen{ display:none; }
+  section.screen.active{ display:block; }
+
+  .card{
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .card h2{
+    font-size: 13px;
+    margin: 0 0 10px;
+    color: var(--text-dim);
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+
+  /* countdown */
+  .countdowns{ display:flex; gap: 10px; }
+  .countdown-item{
+    flex:1;
+    background: var(--bg-elev2);
+    border-radius: 12px;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .countdown-item .name{ font-size: 12px; color: var(--text-dim); margin-bottom: 4px; }
+  .countdown-item .days{ font-size: 28px; font-weight: 800; color: var(--accent); line-height:1; }
+  .countdown-item .days small{ font-size: 13px; font-weight: 600; margin-left:2px; color: var(--text-dim); }
+  .countdown-item .date{ font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+  .countdown-item.today .days{ color: var(--yellow); }
+  .countdown-item.past .days{ color: var(--text-faint); }
+
+  /* progress */
+  .progress-overall{ display:flex; align-items:center; gap:14px; margin-bottom: 10px; }
+  .progress-pct{ font-size: 30px; font-weight: 800; color: var(--green); min-width: 74px; }
+  .progress-bar-track{
+    flex:1; height: 14px; border-radius: 999px;
+    background: var(--bg-elev2); overflow:hidden; border: 1px solid var(--border);
+  }
+  .progress-bar-fill{
+    height:100%; border-radius: 999px;
+    background: linear-gradient(90deg, #22c55e, #34d399);
+    transition: width 0.4s ease;
+  }
+  .unit-progress-row{
+    display:flex; align-items:center; gap: 10px; padding: 7px 0;
+    font-size: 13px;
+  }
+  .unit-progress-row .uname{ width: 92px; flex-shrink:0; color: var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .unit-progress-row .ubar-track{
+    flex:1; height: 8px; border-radius: 999px; background: var(--bg-elev2); overflow:hidden;
+  }
+  .unit-progress-row .ubar-fill{ height:100%; border-radius:999px; background: var(--accent); }
+  .unit-progress-row .unum{ width: 46px; text-align:right; color: var(--text-faint); font-size:11px; flex-shrink:0; }
+
+  /* quota */
+  .quota-box{
+    display:flex; align-items:baseline; gap: 8px; flex-wrap: wrap;
+  }
+  .quota-num{ font-size: 26px; font-weight: 800; color: var(--yellow); }
+  .quota-unit{ font-size: 13px; color: var(--text-dim); }
+  .quota-detail{ font-size: 12px; color: var(--text-faint); margin-top: 6px; }
+
+  /* today retry list */
+  .retry-item{
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--yellow-soft);
+    border: 1px solid rgba(251,191,36,0.4);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .retry-item .info .label{ font-size: 15px; font-weight: 700; color: var(--text); }
+  .retry-item .info .unit{ font-size: 11px; color: var(--text-dim); margin-top:2px; }
+  .retry-item .actions{ display:flex; gap: 6px; }
+  .btn-mini{
+    border:none; border-radius: 8px; padding: 8px 10px; font-size: 12px; font-weight: 700;
+    color: #0f172a; cursor:pointer;
+  }
+  .btn-mini.pass{ background: var(--green); }
+  .btn-mini.fail{ background: var(--red); color:#fff; }
+  .empty-msg{ color: var(--text-faint); font-size: 13px; padding: 10px 2px; text-align:center; }
+
+  /* master table */
+  .unit-block{ margin-bottom: 16px; }
+  .unit-header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 4px 2px 8px;
+  }
+  .unit-header .uh-name{ font-size: 14px; font-weight: 800; }
+  .unit-header .uh-stat{ font-size: 12px; color: var(--text-faint); }
+  .problem-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 12px;
+    margin-bottom: 6px;
+  }
+  .problem-row .p-label{ font-size: 14px; flex:1; padding-right: 10px; }
+  .status-pill{
+    flex-shrink:0;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    border: none;
+    cursor:pointer;
+  }
+  .status-pill.none{ background: var(--gray-soft); color: var(--text-dim); }
+  .status-pill.seen{ background: var(--yellow-soft); color: var(--yellow); }
+  .status-pill.mastered{ background: var(--green-soft); color: var(--green); }
+
+  /* status picker sheet */
+  .sheet-overlay{
+    position: fixed; inset:0; background: rgba(0,0,0,0.55);
+    display:none; align-items:flex-end; justify-content:center; z-index: 100;
+  }
+  .sheet-overlay.active{ display:flex; }
+  .sheet{
+    background: var(--bg-elev);
+    width:100%; max-width: 480px;
+    border-radius: 18px 18px 0 0;
+    padding: 16px 16px calc(20px + var(--safe-bottom));
+    border-top: 1px solid var(--border);
+  }
+  .sheet h3{ margin: 4px 0 14px; font-size: 15px; text-align:center; color: var(--text-dim); }
+  .sheet-opt{
+    width:100%; display:block; text-align:left;
+    border:none; border-radius: 12px; padding: 14px 16px; margin-bottom: 8px;
+    font-size: 15px; font-weight: 700; cursor:pointer;
+  }
+  .sheet-opt.none{ background: var(--gray-soft); color: var(--text); }
+  .sheet-opt.seen{ background: var(--yellow-soft); color: var(--yellow); }
+  .sheet-opt.mastered{ background: var(--green-soft); color: var(--green); }
+  .sheet-cancel{
+    width:100%; background: transparent; border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px; color: var(--text-dim); font-size: 14px;
+    margin-top: 4px; cursor:pointer;
+  }
+
+  /* settings */
+  .field{ margin-bottom: 12px; }
+  .field label{ display:block; font-size: 12px; color: var(--text-dim); margin-bottom: 5px; }
+  .field input[type=text], .field input[type=date], .field input[type=number], .field select{
+    width:100%; background: var(--bg-elev2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 10px; padding: 10px 12px; font-size: 14px;
+  }
+  .field textarea{
+    width:100%; background: var(--bg-elev2); border: 1px solid var(--border);
+    color: var(--text); border-radius: 10px; padding: 10px 12px; font-size: 12px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    min-height: 140px; resize: vertical;
+  }
+  .btn{
+    border:none; border-radius: 10px; padding: 11px 14px; font-size: 14px; font-weight:700;
+    cursor:pointer; background: var(--accent); color:#fff;
+  }
+  .btn.secondary{ background: var(--bg-elev2); color: var(--text); border: 1px solid var(--border); }
+  .btn.danger{ background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.4); }
+  .btn.block{ width:100%; }
+  .btn-row{ display:flex; gap: 8px; margin-top: 8px; }
+  .settings-list-item{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    font-size: 13px; gap: 8px;
+  }
+  .settings-list-item:last-child{ border-bottom: none; }
+  .settings-list-item .sli-name{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .settings-list-item .sli-actions{ display:flex; gap:6px; flex-shrink:0; }
+  .icon-btn{
+    border:none; background: var(--bg-elev2); color: var(--text-dim); border-radius: 8px;
+    width: 30px; height: 30px; font-size: 13px; cursor:pointer;
+  }
+  .icon-btn.del{ color: var(--red); }
+  .toast{
+    position: fixed; left:50%; bottom: calc(80px + var(--safe-bottom));
+    transform: translateX(-50%);
+    background: var(--bg-elev2); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 18px; border-radius: 999px; font-size: 13px;
+    opacity:0; pointer-events:none; transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 200; max-width: 90%; text-align:center;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(-4px); }
+
+  nav.tabbar{
+    position: fixed; left:0; right:0; bottom:0;
+    background: rgba(22,31,54,0.96);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid var(--border);
+    display:flex;
+    padding-bottom: var(--safe-bottom);
+    z-index: 50;
+  }
+  nav.tabbar .tab-wrap{ max-width: 480px; margin:0 auto; width:100%; display:flex; }
+  nav.tabbar button{
+    flex:1; background:none; border:none; color: var(--text-faint);
+    padding: 10px 4px 8px; font-size: 11px; font-weight:600;
+    display:flex; flex-direction:column; align-items:center; gap: 3px;
+    cursor:pointer;
+  }
+  nav.tabbar button .ic{ font-size: 20px; line-height:1; }
+  nav.tabbar button.active{ color: var(--accent); }
+  small.hint{ display:block; color: var(--text-faint); font-size: 11px; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <h1>一橋Dラインマップ</h1>
+    <span class="sub" id="todayLabel"></span>
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <section class="screen active" id="screen-home">
+      <div class="card">
+        <h2>模試までカウントダウン</h2>
+        <div class="countdowns" id="countdowns"></div>
+      </div>
+
+      <div class="card">
+        <h2>Dライン到達率</h2>
+        <div class="progress-overall">
+          <div class="progress-pct" id="overallPct">0%</div>
+          <div class="progress-bar-track"><div class="progress-bar-fill" id="overallBar" style="width:0%"></div></div>
+        </div>
+        <div id="unitProgressList"></div>
+      </div>
+
+      <div class="card">
+        <h2>今週のノルマ</h2>
+        <div class="quota-box">
+          <div class="quota-num" id="quotaNum">-</div>
+          <div class="quota-unit">問 / 週</div>
+        </div>
+        <div class="quota-detail" id="quotaDetail"></div>
+      </div>
+
+      <div class="card">
+        <h2>今日の再現テスト</h2>
+        <div id="todayRetryList"></div>
+      </div>
+    </section>
+
+    <!-- MASTER TABLE -->
+    <section class="screen" id="screen-master">
+      <div id="masterList"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="screen" id="screen-settings">
+
+      <div class="card">
+        <h2>模試日</h2>
+        <div id="examList"></div>
+      </div>
+
+      <div class="card">
+        <h2>再現テスト間隔</h2>
+        <div class="field">
+          <label>解答を見てから何日後に再現テストするか</label>
+          <input type="number" id="retryDaysInput" min="1" max="30" value="2">
+        </div>
+        <button class="btn block" id="saveRetryDaysBtn">保存</button>
+      </div>
+
+      <div class="card">
+        <h2>ユニット管理</h2>
+        <div id="unitManageList"></div>
+        <div class="field" style="margin-top:10px;">
+          <label>新しいユニット名</label>
+          <input type="text" id="newUnitName" placeholder="例: 整数(新教材)">
+        </div>
+        <div class="field">
+          <label>優先度(小さいほど上位表示)</label>
+          <input type="number" id="newUnitPriority" min="1" max="99" value="2">
+        </div>
+        <button class="btn block" id="addUnitBtn">ユニットを追加</button>
+      </div>
+
+      <div class="card">
+        <h2>問題の追加</h2>
+        <div class="field">
+          <label>ユニット</label>
+          <select id="newProblemUnit"></select>
+        </div>
+        <div class="field">
+          <label>ラベル(例: 例題92 微分係数)</label>
+          <input type="text" id="newProblemLabel" placeholder="ラベルを入力">
+        </div>
+        <button class="btn block" id="addProblemBtn">問題を追加</button>
+      </div>
+
+      <div class="card">
+        <h2>問題の編集・削除</h2>
+        <div class="field">
+          <label>ユニットで絞り込み</label>
+          <select id="editFilterUnit"></select>
+        </div>
+        <div id="problemManageList"></div>
+      </div>
+
+      <div class="card">
+        <h2>データのエクスポート</h2>
+        <small class="hint">下のテキストをコピーして保存しておけば、機種変更時にインポートで復元できます。</small>
+        <div class="field" style="margin-top:10px;">
+          <textarea id="exportArea" readonly></textarea>
+        </div>
+        <button class="btn secondary block" id="exportBtn">最新データを表示</button>
+      </div>
+
+      <div class="card">
+        <h2>データのインポート</h2>
+        <small class="hint">エクスポートしたJSONを貼り付けて復元します。現在のデータは上書きされます。</small>
+        <div class="field" style="margin-top:10px;">
+          <textarea id="importArea" placeholder="ここにJSONを貼り付け"></textarea>
+        </div>
+        <button class="btn danger block" id="importBtn">インポートして上書き</button>
+      </div>
+
+    </section>
+  </main>
+
+  <nav class="tabbar">
+    <div class="tab-wrap">
+      <button data-tab="home" class="active"><span class="ic">&#127968;</span>ホーム</button>
+      <button data-tab="master"><span class="ic">&#9989;</span>マスター表</button>
+      <button data-tab="settings"><span class="ic">&#9881;</span>設定</button>
+    </div>
+  </nav>
+</div>
+
+<div class="sheet-overlay" id="statusSheetOverlay">
+  <div class="sheet">
+    <h3 id="statusSheetTitle">状態を選択</h3>
+    <button class="sheet-opt none" data-status="none">未着手にする</button>
+    <button class="sheet-opt seen" data-status="seen">解答を見た(再現テスト予約)</button>
+    <button class="sheet-opt mastered" data-status="mastered">何も見ずに解けた(マスター)</button>
+    <button class="sheet-cancel" id="statusSheetCancel">キャンセル</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "hitotsubashi_dline_v1";
+
+  var INITIAL_DATA = {
+    exams: [
+      { name: "記述模試", date: "2026-10-04" },
+      { name: "一橋模試", date: "2026-11-03" }
+    ],
+    settings: { retryDays: 2 },
+    units: [
+      { id: "bibun", name: "微分", priority: 1 },
+      { id: "sekibun", name: "積分", priority: 1 },
+      { id: "vector", name: "ベクトル", priority: 1 },
+      { id: "kakuritsu", name: "確率(ハッと目覚める確率)", priority: 1 },
+      { id: "suretsu", name: "数列", priority: 2 },
+      { id: "seisu", name: "整数(11/3向け・教材別途)", priority: 3 }
+    ],
+    problems: [
+      { id: "s091", unitId: "bibun", label: "例題91 関数の極限" },
+      { id: "s092", unitId: "bibun", label: "例題92 微分係数" },
+      { id: "s093", unitId: "bibun", label: "例題93 導関数" },
+      { id: "s094", unitId: "bibun", label: "例題94 整式の重解条件" },
+      { id: "s095", unitId: "bibun", label: "例題95 接線の方程式(1)" },
+      { id: "s096", unitId: "bibun", label: "例題96 接線の方程式(2)" },
+      { id: "s097", unitId: "bibun", label: "例題97 接線の本数" },
+      { id: "s098", unitId: "bibun", label: "例題98 2接線のなす角" },
+      { id: "s099", unitId: "bibun", label: "例題99 3次曲線と接線" },
+      { id: "s100", unitId: "bibun", label: "例題100 4次曲線と接線" },
+      { id: "s101", unitId: "bibun", label: "例題101 関数の増減" },
+      { id: "s102", unitId: "bibun", label: "例題102 関数の極値" },
+      { id: "s103", unitId: "bibun", label: "例題103 3次関数の極値と対称性" },
+      { id: "s104", unitId: "bibun", label: "例題104 文字係数を含む関数の最大・最小" },
+      { id: "s105", unitId: "bibun", label: "例題105 変化する定義域における関数の最大・最小" },
+      { id: "s106", unitId: "bibun", label: "例題106 図形の最大・最小(1)" },
+      { id: "s107", unitId: "bibun", label: "例題107 図形の最大・最小(2)" },
+      { id: "s108", unitId: "bibun", label: "例題108 方程式への応用(1)" },
+      { id: "s109", unitId: "bibun", label: "例題109 方程式への応用(2)" },
+      { id: "s110", unitId: "bibun", label: "例題110 不等式への応用" },
+      { id: "s111", unitId: "sekibun", label: "例題111 微分と積分の関係" },
+      { id: "s112", unitId: "sekibun", label: "例題112 不定積分の計算" },
+      { id: "s113", unitId: "sekibun", label: "例題113 定積分の計算(1)" },
+      { id: "s114", unitId: "sekibun", label: "例題114 定積分の計算(2)" },
+      { id: "s115", unitId: "sekibun", label: "例題115 絶対値のついた関数の積分(1)" },
+      { id: "s116", unitId: "sekibun", label: "例題116 絶対値のついた関数の積分(2)" },
+      { id: "s117", unitId: "sekibun", label: "例題117 積分方程式" },
+      { id: "s118", unitId: "sekibun", label: "例題118 曲線で囲まれた図形の面積" },
+      { id: "s119", unitId: "sekibun", label: "例題119 放物線と直線で囲まれた図形の面積" },
+      { id: "s120", unitId: "sekibun", label: "例題120 放物線と接線で囲まれた図形の面積" },
+      { id: "s121", unitId: "sekibun", label: "例題121 放物線と共通接線" },
+      { id: "s122", unitId: "sekibun", label: "例題122 面積の最小・分割" },
+      { id: "s123", unitId: "sekibun", label: "例題123 放物線と円" },
+      { id: "s124", unitId: "sekibun", label: "例題124 3次曲線の平行移動" },
+      { id: "s125", unitId: "sekibun", label: "例題125 3次曲線と接線で囲まれた部分の面積" },
+      { id: "s126", unitId: "sekibun", label: "例題126 3次曲線と放物線で囲まれた部分の面積" },
+      { id: "s127", unitId: "suretsu", label: "例題127 等差数列" },
+      { id: "s128", unitId: "suretsu", label: "例題128 等比数列" },
+      { id: "s129", unitId: "suretsu", label: "例題129 複利計算" },
+      { id: "s130", unitId: "suretsu", label: "例題130 Σの計算" },
+      { id: "s131", unitId: "suretsu", label: "例題131 Σ a_k・r^k" },
+      { id: "s132", unitId: "suretsu", label: "例題132 階差数列" },
+      { id: "s133", unitId: "suretsu", label: "例題133 S_nからa_nを求める" },
+      { id: "s134", unitId: "suretsu", label: "例題134 積の和" },
+      { id: "s135", unitId: "suretsu", label: "例題135 格子点の個数" },
+      { id: "s136", unitId: "suretsu", label: "例題136 群数列(1)" },
+      { id: "s137", unitId: "suretsu", label: "例題137 群数列(2)" },
+      { id: "s138", unitId: "suretsu", label: "例題138 2項間漸化式 a_(n+1)=pa_n+q" },
+      { id: "s139", unitId: "suretsu", label: "例題139 2項間漸化式 a_(n+1)=pa_n+q(n)" },
+      { id: "s140", unitId: "suretsu", label: "例題140 3項間漸化式" },
+      { id: "s141", unitId: "suretsu", label: "例題141 連立漸化式" },
+      { id: "s142", unitId: "suretsu", label: "例題142 漸化式の応用(階差型)" },
+      { id: "s143", unitId: "suretsu", label: "例題143 2項間漸化式の応用" },
+      { id: "s144", unitId: "suretsu", label: "例題144 3項間漸化式の応用" },
+      { id: "s145", unitId: "suretsu", label: "例題145 連立漸化式の応用" },
+      { id: "s146", unitId: "suretsu", label: "例題146 数学的帰納法(1)" },
+      { id: "s147", unitId: "suretsu", label: "例題147 数学的帰納法(2)" },
+      { id: "s161", unitId: "vector", label: "例題161 有向線分" },
+      { id: "s162", unitId: "vector", label: "例題162 ベクトルの成分" },
+      { id: "s163", unitId: "vector", label: "例題163 分点公式(1)" },
+      { id: "s164", unitId: "vector", label: "例題164 分点公式(2)" },
+      { id: "s165", unitId: "vector", label: "例題165 内心・外心・重心" },
+      { id: "s166", unitId: "vector", label: "例題166 点の位置" },
+      { id: "s167", unitId: "vector", label: "例題167 1次独立" },
+      { id: "s168", unitId: "vector", label: "例題168 終点の存在領域" },
+      { id: "s169", unitId: "vector", label: "例題169 重心座標" },
+      { id: "s170", unitId: "vector", label: "例題170 空間の1次独立" },
+      { id: "s171", unitId: "vector", label: "例題171 内積の定義・基本演算" },
+      { id: "s172", unitId: "vector", label: "例題172 なす角" },
+      { id: "s173", unitId: "vector", label: "例題173 直線のベクトル方程式(1)" },
+      { id: "s174", unitId: "vector", label: "例題174 直線のベクトル方程式(2)" },
+      { id: "s175", unitId: "vector", label: "例題175 円のベクトル方程式" },
+      { id: "s176", unitId: "vector", label: "例題176 直線・平面へおろした垂線の足" },
+      { id: "s177", unitId: "vector", label: "例題177 平行六面体の体積" },
+      { id: "s178", unitId: "vector", label: "例題178 球のベクトル方程式" }
+    ]
+  };
+
+  // ---------- state ----------
+  var state = null;
+
+  function loadState(){
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      try{
+        state = JSON.parse(raw);
+        migrateState();
+        return;
+      }catch(e){
+        console.error("破損データ。初期データで再構築します。", e);
+      }
+    }
+    state = JSON.parse(JSON.stringify(INITIAL_DATA));
+    migrateState();
+    saveState();
+  }
+
+  function migrateState(){
+    if(!state.exams) state.exams = JSON.parse(JSON.stringify(INITIAL_DATA.exams));
+    if(!state.units) state.units = [];
+    if(!state.problems) state.problems = [];
+    if(!state.settings) state.settings = { retryDays: 2 };
+    state.settings.retryDays = parseInt(state.settings.retryDays, 10);
+    if(isNaN(state.settings.retryDays) || state.settings.retryDays < 1) state.settings.retryDays = 2;
+    state.problems.forEach(function(p){
+      p.status = p.status || "none";
+      p.seenAt = p.seenAt || null;
+      p.retryAt = p.retryAt || null;
+      p.history = p.history || [];
+    });
+  }
+
+  function saveState(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  // ---------- date helpers ----------
+  function todayStr(){
+    return formatDate(new Date());
+  }
+  function formatDate(d){
+    var y = d.getFullYear();
+    var m = String(d.getMonth()+1).padStart(2,"0");
+    var day = String(d.getDate()).padStart(2,"0");
+    return y+"-"+m+"-"+day;
+  }
+  function addDays(dateStr, n){
+    var d = new Date(dateStr+"T00:00:00");
+    d.setDate(d.getDate()+n);
+    return formatDate(d);
+  }
+  function daysBetween(fromStr, toStr){
+    var a = new Date(fromStr+"T00:00:00");
+    var b = new Date(toStr+"T00:00:00");
+    return Math.round((b-a)/86400000);
+  }
+  function fmtJP(dateStr){
+    var d = new Date(dateStr+"T00:00:00");
+    if(isNaN(d.getTime())) return dateStr;
+    return (d.getMonth()+1)+"/"+d.getDate();
+  }
+
+  function uid(prefix){
+    return prefix + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+  }
+
+  function toast(msg){
+    var el = document.getElementById("toast");
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ el.classList.remove("show"); }, 1800);
+  }
+
+  // ---------- tabs ----------
+  function switchTab(name){
+    document.querySelectorAll(".screen").forEach(function(s){ s.classList.remove("active"); });
+    document.getElementById("screen-"+name).classList.add("active");
+    document.querySelectorAll("nav.tabbar button").forEach(function(b){
+      b.classList.toggle("active", b.getAttribute("data-tab") === name);
+    });
+    if(name === "home") renderHome();
+    if(name === "master") renderMaster();
+    if(name === "settings") renderSettings();
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- HOME ----------
+  function renderHome(){
+    document.getElementById("todayLabel").textContent = fmtJP(todayStr()) + " 現在";
+    renderCountdowns();
+    renderProgress();
+    renderQuota();
+    renderTodayRetry();
+  }
+
+  function renderCountdowns(){
+    var wrap = document.getElementById("countdowns");
+    wrap.innerHTML = "";
+    var today = todayStr();
+    state.exams.forEach(function(exam){
+      var diff = daysBetween(today, exam.date);
+      var div = document.createElement("div");
+      div.className = "countdown-item";
+      var daysHtml;
+      if(isNaN(diff)){
+        daysHtml = "-";
+      } else if(diff > 0){
+        daysHtml = "あと" + diff + "<small>日</small>";
+      } else if(diff === 0){
+        div.classList.add("today");
+        daysHtml = "本日!";
+      } else {
+        div.classList.add("past");
+        daysHtml = "終了";
+      }
+      div.innerHTML =
+        '<div class="name">'+escapeHtml(exam.name)+'</div>' +
+        '<div class="days">'+daysHtml+'</div>' +
+        '<div class="date">'+escapeHtml(fmtJP(exam.date))+'</div>';
+      wrap.appendChild(div);
+    });
+  }
+
+  function renderProgress(){
+    var total = state.problems.length;
+    var mastered = state.problems.filter(function(p){ return p.status === "mastered"; }).length;
+    var pct = total > 0 ? Math.round((mastered/total)*100) : 0;
+    document.getElementById("overallPct").textContent = pct + "%";
+    document.getElementById("overallBar").style.width = pct + "%";
+
+    var list = document.getElementById("unitProgressList");
+    list.innerHTML = "";
+    sortedUnits().forEach(function(u){
+      var ps = state.problems.filter(function(p){ return p.unitId === u.id; });
+      if(ps.length === 0) return;
+      var m = ps.filter(function(p){ return p.status === "mastered"; }).length;
+      var upct = Math.round((m/ps.length)*100);
+      var row = document.createElement("div");
+      row.className = "unit-progress-row";
+      row.innerHTML =
+        '<div class="uname">'+escapeHtml(u.name)+'</div>' +
+        '<div class="ubar-track"><div class="ubar-fill" style="width:'+upct+'%"></div></div>' +
+        '<div class="unum">'+m+'/'+ps.length+'</div>';
+      list.appendChild(row);
+    });
+  }
+
+  function renderQuota(){
+    var unmastered = state.problems.filter(function(p){ return p.status !== "mastered"; }).length;
+    var target = state.exams.length > 0 ? state.exams[0] : null;
+    var numEl = document.getElementById("quotaNum");
+    var detailEl = document.getElementById("quotaDetail");
+    if(!target){
+      numEl.textContent = "-";
+      detailEl.textContent = "模試日が未設定です。設定タブで追加してください。";
+      return;
+    }
+    var today = todayStr();
+    var daysLeft = daysBetween(today, target.date);
+    if(isNaN(daysLeft) || daysLeft <= 0){
+      numEl.textContent = "-";
+      detailEl.textContent = target.name + "(" + fmtJP(target.date) + ")は本日または終了しています。";
+      return;
+    }
+    var weeksLeft = Math.max(1, Math.ceil(daysLeft/7));
+    var perWeek = Math.ceil(unmastered/weeksLeft);
+    numEl.textContent = perWeek;
+    detailEl.textContent =
+      "未マスター "+unmastered+"問 ÷ 残り"+weeksLeft+"週(" + target.name + "まで"+daysLeft+"日)で自動計算";
+  }
+
+  function renderTodayRetry(){
+    var wrap = document.getElementById("todayRetryList");
+    var today = todayStr();
+    var items = state.problems.filter(function(p){
+      return p.status === "seen" && p.retryAt && p.retryAt <= today;
+    });
+    items.sort(function(a,b){ return (a.retryAt || "").localeCompare(b.retryAt || ""); });
+    wrap.innerHTML = "";
+    if(items.length === 0){
+      wrap.innerHTML = '<div class="empty-msg">今日の再現テストはありません。</div>';
+      return;
+    }
+    items.forEach(function(p){
+      var unit = findUnit(p.unitId);
+      var row = document.createElement("div");
+      row.className = "retry-item";
+      row.innerHTML =
+        '<div class="info">' +
+          '<div class="label">'+escapeHtml(p.label)+'</div>' +
+          '<div class="unit">'+escapeHtml(unit ? unit.name : "")+'</div>' +
+        '</div>' +
+        '<div class="actions">' +
+          '<button class="btn-mini pass" data-id="'+escapeAttr(p.id)+'">合格</button>' +
+          '<button class="btn-mini fail" data-id="'+escapeAttr(p.id)+'">不合格</button>' +
+        '</div>';
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll(".btn-mini.pass").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        retryResult(btn.getAttribute("data-id"), true);
+      });
+    });
+    wrap.querySelectorAll(".btn-mini.fail").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        retryResult(btn.getAttribute("data-id"), false);
+      });
+    });
+  }
+
+  function retryResult(problemId, passed){
+    var p = state.problems.find(function(x){ return x.id === problemId; });
+    if(!p) return;
+    var today = todayStr();
+    p.history.push({ date: today, result: passed ? "pass" : "fail", type: "retry" });
+    if(passed){
+      p.status = "mastered";
+      p.retryAt = null;
+    } else {
+      p.status = "seen";
+      p.seenAt = today;
+      p.retryAt = addDays(today, state.settings.retryDays);
+    }
+    saveState();
+    renderHome();
+    toast(passed ? "マスター! よくできました" : fmtJP(p.retryAt) + " に再チャレンジ");
+  }
+
+  // ---------- MASTER ----------
+  function sortedUnits(){
+    return state.units.slice().sort(function(a,b){
+      if(a.priority !== b.priority) return a.priority - b.priority;
+      return String(a.name).localeCompare(String(b.name), "ja");
+    });
+  }
+  function findUnit(id){
+    return state.units.find(function(u){ return u.id === id; });
+  }
+
+  function renderMaster(){
+    var wrap = document.getElementById("masterList");
+    wrap.innerHTML = "";
+    var units = sortedUnits();
+    if(units.length === 0){
+      wrap.innerHTML = '<div class="card"><div class="empty-msg">ユニットがありません。設定タブから追加してください。</div></div>';
+      return;
+    }
+    units.forEach(function(u){
+      var ps = state.problems.filter(function(p){ return p.unitId === u.id; });
+      var block = document.createElement("div");
+      block.className = "unit-block card";
+      var m = ps.filter(function(p){ return p.status === "mastered"; }).length;
+      var head = document.createElement("div");
+      head.className = "unit-header";
+      head.innerHTML =
+        '<div class="uh-name">'+escapeHtml(u.name)+'</div>' +
+        '<div class="uh-stat">'+m+' / '+ps.length+'</div>';
+      block.appendChild(head);
+
+      if(ps.length === 0){
+        var empty = document.createElement("div");
+        empty.className = "empty-msg";
+        empty.textContent = "問題がありません(設定タブで追加)";
+        block.appendChild(empty);
+      } else {
+        ps.forEach(function(p){
+          var row = document.createElement("div");
+          row.className = "problem-row";
+          row.innerHTML =
+            '<div class="p-label">'+escapeHtml(p.label)+'</div>' +
+            '<button class="status-pill '+p.status+'" data-id="'+escapeAttr(p.id)+'">'+statusLabel(p.status)+'</button>';
+          block.appendChild(row);
+        });
+      }
+      wrap.appendChild(block);
+    });
+
+    wrap.querySelectorAll(".status-pill").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        openStatusSheet(btn.getAttribute("data-id"));
+      });
+    });
+  }
+
+  function statusLabel(status){
+    if(status === "seen") return "解答を見た";
+    if(status === "mastered") return "マスター";
+    return "未着手";
+  }
+
+  var pendingProblemId = null;
+  function openStatusSheet(problemId){
+    pendingProblemId = problemId;
+    var p = state.problems.find(function(x){ return x.id === problemId; });
+    document.getElementById("statusSheetTitle").textContent = p ? p.label : "状態を選択";
+    document.getElementById("statusSheetOverlay").classList.add("active");
+  }
+  function closeStatusSheet(){
+    pendingProblemId = null;
+    document.getElementById("statusSheetOverlay").classList.remove("active");
+  }
+  function applyStatus(status){
+    if(!pendingProblemId) return;
+    var p = state.problems.find(function(x){ return x.id === pendingProblemId; });
+    if(!p){ closeStatusSheet(); return; }
+    var today = todayStr();
+    if(status === "seen"){
+      p.status = "seen";
+      p.seenAt = today;
+      p.retryAt = addDays(today, state.settings.retryDays);
+      p.history.push({ date: today, result: "seen", type: "seen" });
+      toast(fmtJP(p.retryAt) + " に再現テスト予定");
+    } else if(status === "mastered"){
+      p.status = "mastered";
+      p.retryAt = null;
+      p.history.push({ date: today, result: "mastered", type: "mastered" });
+      toast("マスターにしました");
+    } else {
+      p.status = "none";
+      p.seenAt = null;
+      p.retryAt = null;
+      toast("未着手に戻しました");
+    }
+    saveState();
+    closeStatusSheet();
+    renderMaster();
+  }
+
+  // ---------- SETTINGS ----------
+  function renderSettings(){
+    renderExamList();
+    document.getElementById("retryDaysInput").value = state.settings.retryDays;
+    renderUnitManageList();
+    renderProblemUnitSelect();
+    renderEditFilterUnit();
+    renderProblemManageList();
+  }
+
+  function renderExamList(){
+    var wrap = document.getElementById("examList");
+    wrap.innerHTML = "";
+    state.exams.forEach(function(exam, idx){
+      var row = document.createElement("div");
+      row.className = "field";
+      row.style.borderBottom = "1px solid var(--border)";
+      row.style.paddingBottom = "12px";
+      row.innerHTML =
+        '<label>模試名</label>' +
+        '<input type="text" data-idx="'+idx+'" data-k="name" value="'+escapeAttr(exam.name)+'" style="margin-bottom:6px;">' +
+        '<label>日付</label>' +
+        '<input type="date" data-idx="'+idx+'" data-k="date" value="'+escapeAttr(exam.date)+'">' +
+        '<div class="btn-row"><button class="btn danger" data-del-exam="'+idx+'">この模試を削除</button></div>';
+      wrap.appendChild(row);
+    });
+    var addBtn = document.createElement("button");
+    addBtn.className = "btn secondary block";
+    addBtn.textContent = "模試を追加";
+    addBtn.style.marginTop = "10px";
+    addBtn.addEventListener("click", function(){
+      state.exams.push({ name: "新しい模試", date: todayStr() });
+      saveState();
+      renderExamList();
+    });
+    wrap.appendChild(addBtn);
+
+    wrap.querySelectorAll("input[data-idx]").forEach(function(inp){
+      inp.addEventListener("change", function(){
+        var idx = parseInt(inp.getAttribute("data-idx"), 10);
+        var k = inp.getAttribute("data-k");
+        if(!state.exams[idx]) return;
+        state.exams[idx][k] = inp.value;
+        saveState();
+        toast("保存しました");
+      });
+    });
+    wrap.querySelectorAll("[data-del-exam]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var idx = parseInt(btn.getAttribute("data-del-exam"), 10);
+        if(confirm("この模試を削除しますか?")){
+          state.exams.splice(idx, 1);
+          saveState();
+          renderExamList();
+        }
+      });
+    });
+  }
+
+  function renderUnitManageList(){
+    var wrap = document.getElementById("unitManageList");
+    wrap.innerHTML = "";
+    sortedUnits().forEach(function(u){
+      var count = state.problems.filter(function(p){ return p.unitId === u.id; }).length;
+      var row = document.createElement("div");
+      row.className = "settings-list-item";
+      row.innerHTML =
+        '<div class="sli-name">'+escapeHtml(u.name)+' <span style="color:var(--text-faint)">(優先'+u.priority+'・'+count+'問)</span></div>' +
+        '<div class="sli-actions">' +
+          '<button class="icon-btn" data-rename="'+escapeAttr(u.id)+'" title="編集">&#9998;</button>' +
+          '<button class="icon-btn del" data-delunit="'+escapeAttr(u.id)+'" title="削除">&#10005;</button>' +
+        '</div>';
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll("[data-rename]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var u = findUnit(btn.getAttribute("data-rename"));
+        if(!u) return;
+        var newName = prompt("ユニット名", u.name);
+        if(newName === null) return;
+        newName = newName.trim();
+        if(newName !== "") u.name = newName;
+        var newPriority = prompt("優先度(小さいほど上位)", u.priority);
+        if(newPriority !== null && !isNaN(parseInt(newPriority, 10))){
+          u.priority = parseInt(newPriority, 10);
+        }
+        saveState();
+        renderSettings();
+        toast("ユニットを更新しました");
+      });
+    });
+    wrap.querySelectorAll("[data-delunit]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var id = btn.getAttribute("data-delunit");
+        var u = findUnit(id);
+        if(!u) return;
+        var count = state.problems.filter(function(p){ return p.unitId === id; }).length;
+        var msg = count > 0
+          ? "「"+u.name+"」を削除すると、所属する"+count+"問も削除されます。よろしいですか?"
+          : "「"+u.name+"」を削除しますか?";
+        if(confirm(msg)){
+          state.units = state.units.filter(function(x){ return x.id !== id; });
+          state.problems = state.problems.filter(function(p){ return p.unitId !== id; });
+          saveState();
+          renderSettings();
+          toast("削除しました");
+        }
+      });
+    });
+  }
+
+  function renderProblemUnitSelect(){
+    var sel = document.getElementById("newProblemUnit");
+    sel.innerHTML = "";
+    sortedUnits().forEach(function(u){
+      var opt = document.createElement("option");
+      opt.value = u.id;
+      opt.textContent = u.name;
+      sel.appendChild(opt);
+    });
+  }
+
+  function renderEditFilterUnit(){
+    var sel = document.getElementById("editFilterUnit");
+    var prevVal = sel.value;
+    sel.innerHTML = '<option value="__all__">すべて</option>';
+    sortedUnits().forEach(function(u){
+      var opt = document.createElement("option");
+      opt.value = u.id;
+      opt.textContent = u.name;
+      sel.appendChild(opt);
+    });
+    if(prevVal){
+      sel.value = prevVal;
+      if(sel.value !== prevVal) sel.value = "__all__";
+    }
+  }
+
+  function renderProblemManageList(){
+    var wrap = document.getElementById("problemManageList");
+    var filter = document.getElementById("editFilterUnit").value || "__all__";
+    wrap.innerHTML = "";
+    var list = state.problems.filter(function(p){
+      return filter === "__all__" || p.unitId === filter;
+    });
+    if(list.length === 0){
+      wrap.innerHTML = '<div class="empty-msg">問題がありません</div>';
+      return;
+    }
+    list.forEach(function(p){
+      var row = document.createElement("div");
+      row.className = "settings-list-item";
+      row.innerHTML =
+        '<div class="sli-name">'+escapeHtml(p.label)+'</div>' +
+        '<div class="sli-actions">' +
+          '<button class="icon-btn" data-editp="'+escapeAttr(p.id)+'" title="編集">&#9998;</button>' +
+          '<button class="icon-btn del" data-delp="'+escapeAttr(p.id)+'" title="削除">&#10005;</button>' +
+        '</div>';
+      wrap.appendChild(row);
+    });
+    wrap.querySelectorAll("[data-editp]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var p = state.problems.find(function(x){ return x.id === btn.getAttribute("data-editp"); });
+        if(!p) return;
+        var newLabel = prompt("ラベルを編集", p.label);
+        if(newLabel === null) return;
+        newLabel = newLabel.trim();
+        if(newLabel === "") return;
+        p.label = newLabel;
+        saveState();
+        renderProblemManageList();
+        toast("更新しました");
+      });
+    });
+    wrap.querySelectorAll("[data-delp]").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var p = state.problems.find(function(x){ return x.id === btn.getAttribute("data-delp"); });
+        if(!p) return;
+        if(confirm("「"+p.label+"」を削除しますか?")){
+          state.problems = state.problems.filter(function(x){ return x.id !== p.id; });
+          saveState();
+          renderProblemManageList();
+          toast("削除しました");
+        }
+      });
+    });
+  }
+
+  // ---------- escaping ----------
+  function escapeHtml(str){
+    return String(str == null ? "" : str)
+      .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+  function escapeAttr(str){ return escapeHtml(str); }
+
+  // ---------- events ----------
+  function bindEvents(){
+    document.querySelectorAll("nav.tabbar button").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        switchTab(btn.getAttribute("data-tab"));
+      });
+    });
+
+    document.getElementById("statusSheetCancel").addEventListener("click", closeStatusSheet);
+    document.getElementById("statusSheetOverlay").addEventListener("click", function(e){
+      if(e.target === document.getElementById("statusSheetOverlay")) closeStatusSheet();
+    });
+    document.querySelectorAll(".sheet-opt").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        applyStatus(btn.getAttribute("data-status"));
+      });
+    });
+
+    document.getElementById("saveRetryDaysBtn").addEventListener("click", function(){
+      var v = parseInt(document.getElementById("retryDaysInput").value, 10);
+      if(isNaN(v) || v < 1){ toast("1以上の日数を入力してください"); return; }
+      state.settings.retryDays = v;
+      saveState();
+      toast("保存しました(以後の「解答を見た」に適用)");
+    });
+
+    document.getElementById("addUnitBtn").addEventListener("click", function(){
+      var name = document.getElementById("newUnitName").value.trim();
+      var priority = parseInt(document.getElementById("newUnitPriority").value, 10);
+      if(name === ""){ toast("ユニット名を入力してください"); return; }
+      if(isNaN(priority)) priority = 2;
+      state.units.push({ id: uid("u"), name: name, priority: priority });
+      saveState();
+      document.getElementById("newUnitName").value = "";
+      renderSettings();
+      toast("ユニットを追加しました");
+    });
+
+    document.getElementById("addProblemBtn").addEventListener("click", function(){
+      var unitId = document.getElementById("newProblemUnit").value;
+      var label = document.getElementById("newProblemLabel").value.trim();
+      if(!unitId){ toast("先にユニットを作成してください"); return; }
+      if(label === ""){ toast("ラベルを入力してください"); return; }
+      state.problems.push({
+        id: uid("p"), unitId: unitId, label: label,
+        status: "none", seenAt: null, retryAt: null, history: []
+      });
+      saveState();
+      document.getElementById("newProblemLabel").value = "";
+      renderSettings();
+      toast("問題を追加しました");
+    });
+
+    document.getElementById("editFilterUnit").addEventListener("change", renderProblemManageList);
+
+    document.getElementById("exportBtn").addEventListener("click", function(){
+      var area = document.getElementById("exportArea");
+      area.value = JSON.stringify(state, null, 2);
+      area.focus();
+      area.select();
+      toast("最新データを表示しました。全選択済み");
+    });
+
+    document.getElementById("importBtn").addEventListener("click", function(){
+      var raw = document.getElementById("importArea").value.trim();
+      if(raw === ""){ toast("JSONを貼り付けてください"); return; }
+      var parsed;
+      try{
+        parsed = JSON.parse(raw);
+      }catch(e){
+        toast("JSONの形式が正しくありません");
+        return;
+      }
+      if(!parsed || !Array.isArray(parsed.units) || !Array.isArray(parsed.problems)){
+        toast("データ形式が違います(units / problems が必要)");
+        return;
+      }
+      if(!confirm("現在のデータを上書きしてインポートします。よろしいですか?")) return;
+      state = parsed;
+      migrateState();
+      saveState();
+      document.getElementById("importArea").value = "";
+      renderSettings();
+      toast("インポートしました");
+    });
+  }
+
+  // ---------- init ----------
+  function init(){
+    loadState();
+    bindEvents();
+    switchTab("home");
+  }
+
+  if(document.readyState === "loading"){
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
