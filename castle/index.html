@@ -13,7 +13,8 @@
     --pbangai:#bfa4e8; --pbangaibg:#efe7fb;
     --peach:#ffcf9e; --peachbg:#fff0df;
     --mint:#8fd9c0; --mintbg:#e6f7f1;
-    --gold:#f4c453; --goldbg:#fff3d6;
+    --gold:#9b72d1; --goldbg:#f1e7fa;
+    --sky:#8ecfe8; --skybg:#e3f4fb;
     --grey:#efe7e1; --greytx:#c3b4aa;
     --accent:#ff8fab;
     --shadow:0 6px 18px rgba(180,140,120,.14);
@@ -127,15 +128,16 @@
   </header>
 
   <div class="tabs">
-    <button class="tab active" data-tab="castle">🏯 城マップ</button>
-    <button class="tab" data-tab="pref">🗾 制覇マップ</button>
+    <button class="tab active" data-tab="castle">🏯 城の制覇マップ</button>
+    <button class="tab" data-tab="pref">🗾 都道府県制覇</button>
   </div>
 
   <!-- CASTLE TAB -->
   <section id="tab-castle">
     <div class="legend">
-      <span><i class="dot" style="background:var(--peach)"></i>訪れたお城がある県</span>
-      <span><i class="dot" style="background:var(--grey)"></i>まだ0のお城</span>
+      <span><i class="dot" style="background:var(--p100)"></i>100名城 制覇</span>
+      <span><i class="dot" style="background:var(--pzoku)"></i>続100名城 制覇</span>
+      <span><i class="dot" style="background:var(--gold)"></i>両方 制覇</span>
       <span style="color:#b9743e">県をタップすると城の一覧（未訪問も）が見られます</span>
     </div>
     <div class="mapcard"><svg id="svgCastle" class="jpmap" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg"><title>Japanese Prefectures</title>
@@ -363,9 +365,9 @@
   <!-- PREF TAB -->
   <section id="tab-pref" style="display:none">
     <div class="legend">
-      <span><i class="dot" style="background:var(--p100)"></i>100名城 制覇</span>
-      <span><i class="dot" style="background:var(--pzoku)"></i>続100名城 制覇</span>
-      <span><i class="dot" style="background:var(--gold)"></i>両方 制覇</span>
+      <span><i class="dot" style="background:var(--sky)"></i>訪れたことがある</span>
+      <span><i class="dot" style="background:var(--grey)"></i>まだ</span>
+      <span style="color:#4a90a4">県をタップで「行った/まだ」を切り替え（自動保存）</span>
     </div>
     <div class="mapcard"><svg id="svgPref" class="jpmap" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg"><title>Japanese Prefectures</title>
   <desc>Created by Geolonia (https://geolonia.com/).</desc>
@@ -587,7 +589,6 @@
       <line x1="277.337" y1="380.162" x2="46.213" y2="380.162" style=""/>
     </g>
   </g></svg></div>
-    <div class="hint">城マップと同じく、県をタップすると内訳が見られます</div>
   </section>
 
   <footer>
@@ -878,8 +879,11 @@ const CODE2PREF = {1:'北海道',2:'青森',3:'岩手',4:'宮城',5:'秋田',6:'
   31:'鳥取',32:'島根',33:'岡山',34:'広島',35:'山口',36:'徳島',37:'香川',38:'愛媛',39:'高知',40:'福岡',
   41:'佐賀',42:'長崎',43:'熊本',44:'大分',45:'宮崎',46:'鹿児島',47:'沖縄'};
 
+const VISITED_SEED = ['青森','岩手','宮城','秋田','山形','福島','茨城','栃木','群馬','埼玉','千葉','東京','神奈川','新潟','山梨','長野','静岡','愛知','滋賀','京都','大阪','兵庫','奈良','岡山','広島','山口','徳島','香川','高知','長崎','沖縄'];
+
 /* ---- storage ---- */
 const LS = {
+  pref:'castleapp.pref.v1',
   custom:'castleapp.custom.v1',
   extra:'castleapp.extraVisited.v1',
   photo:n=>'castleapp.photo.'+n,
@@ -887,6 +891,14 @@ const LS = {
 };
 function getPhoto(n){ return localStorage.getItem(LS.photo(n)); }
 function getKotoba(c){ return localStorage.getItem(LS.kotoba(c.n)) || c.k || ''; }
+
+/* ---- 都道府県 手動制覇トグル(城とは独立、一般的な旅行記録) ---- */
+function loadVisitedPref(){
+  try{ const v=JSON.parse(localStorage.getItem(LS.pref)); if(Array.isArray(v)) return new Set(v); }catch(e){}
+  return new Set(VISITED_SEED);
+}
+let visitedPref = loadVisitedPref();
+function saveVisitedPref(){ localStorage.setItem(LS.pref, JSON.stringify([...visitedPref])); }
 
 /* ---- custom (自分で追加した) castles ---- */
 function loadCustom(){
@@ -943,14 +955,8 @@ function prefCompletion(pref){
 }
 
 /* ---- 日本地図(SVG)の描画 ---- */
-function paintMaps(){
+function paintCastleMap(){
   document.querySelectorAll('#svgCastle .prefecture').forEach(g=>{
-    const pref = CODE2PREF[g.dataset.code];
-    const list = byPref[pref]||[];
-    const visitedCount = list.filter(c=>c.visited).length;
-    g.style.fill = visitedCount>0 ? 'var(--peach)' : '#f1e8e2';
-  });
-  document.querySelectorAll('#svgPref .prefecture').forEach(g=>{
     const pref = CODE2PREF[g.dataset.code];
     const st = prefCompletion(pref);
     let fill = '#f1e8e2';
@@ -960,9 +966,25 @@ function paintMaps(){
     g.style.fill = fill;
   });
 }
+function paintPrefMap(){
+  document.querySelectorAll('#svgPref .prefecture').forEach(g=>{
+    const pref = CODE2PREF[g.dataset.code];
+    g.style.fill = visitedPref.has(pref) ? 'var(--sky)' : '#f1e8e2';
+  });
+}
+function paintMaps(){ paintCastleMap(); paintPrefMap(); }
 function wireMapClicks(){
-  document.querySelectorAll('.jpmap .prefecture').forEach(g=>{
+  document.querySelectorAll('#svgCastle .prefecture').forEach(g=>{
     g.onclick=()=> openPref(CODE2PREF[g.dataset.code]);
+  });
+  document.querySelectorAll('#svgPref .prefecture').forEach(g=>{
+    g.onclick=()=>{
+      const pref = CODE2PREF[g.dataset.code];
+      visitedPref.has(pref) ? visitedPref.delete(pref) : visitedPref.add(pref);
+      saveVisitedPref();
+      paintPrefMap();
+      updateStats();
+    };
   });
 }
 
@@ -1104,8 +1126,7 @@ function submitAddForm(){
 /* ---- stats & tabs ---- */
 function updateStats(){
   document.getElementById('stCastle').textContent = visitedCastles().length;
-  const goldOrColored = Object.keys(CODE2PREF).map(k=>CODE2PREF[k]).filter(p=>{ const st=prefCompletion(p); return st.complete100||st.completeZoku; }).length;
-  document.getElementById('stPref').textContent = goldOrColored;
+  document.getElementById('stPref').textContent = visitedPref.size;
 }
 document.getElementById('ovClose').onclick=()=>document.getElementById('ov').classList.remove('show');
 document.getElementById('ov').onclick=e=>{ if(e.target.id==='ov') document.getElementById('ov').classList.remove('show'); };
