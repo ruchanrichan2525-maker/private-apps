@@ -647,12 +647,12 @@ const CASTLES = [
   {n:'菅谷館', p:'埼玉', c:'zoku', img:'sugaya', note:'nbd1c81828f15', k:'鎌倉武士の鑑・畠山重忠ゆかりの館跡。重忠公の像と土塁が出迎える。'},
   {n:'滝山城', p:'東京', c:'zoku', img:null, note:null, k:'北条氏の巨大な土の城。大堀切や馬出など、土の防御が教科書的に残る。'},
   {n:'品川台場', p:'東京', c:'zoku', img:null, note:null, k:'黒船に備えて幕末に築かれた海上の砲台。いまはお台場のシンボル。'},
-  {n:'小机城', p:'神奈川', c:'zoku', img:null, note:null, k:'横浜に残る北条氏の支城。竹林におおわれた空堀と土塁が心地よい。'},
+  {n:'小机城', p:'神奈川', c:'zoku', img:null, note:'n1d2f6417667d', k:'横浜に残る北条氏の支城。竹林におおわれた空堀と土塁が心地よい。'},
   {n:'石垣山城', p:'神奈川', c:'zoku', img:'ishigakiyama', note:'ne12ce90a1d60', k:'秀吉が小田原攻めで築いた「一夜城」。関東初の総石垣の城。'},
   {n:'八幡山城', p:'滋賀', c:'zoku', img:'hachimanyama', note:'nef0b49d819fb', k:'豊臣秀次が築いた山城。山頂からは琵琶湖と近江八幡の町を一望。'},
-  {n:'勝瑞城', p:'徳島', c:'zoku', img:null, note:null, k:'阿波を治めた三好氏の本拠。戦国の館跡が静かに広がる平城。'},
+  {n:'勝瑞城', p:'徳島', c:'zoku', img:null, note:'ne6fe9aa989e9', k:'阿波を治めた三好氏の本拠。戦国の館跡が静かに広がる平城。'},
   {n:'一宮城', p:'徳島', c:'zoku', img:null, note:null, k:'阿波最大の山城。長宗我部と激しく争った、石垣の残る要害。'},
-  {n:'引田城', p:'香川', c:'zoku', img:null, note:null, k:'瀬戸内を見張る海の城。港町・引田を見下ろす石垣の岬の城。'},
+  {n:'引田城', p:'香川', c:'zoku', img:null, note:'nac79d2974a9e', k:'瀬戸内を見張る海の城。港町・引田を見下ろす石垣の岬の城。'},
   {n:'岡豊城', p:'高知', c:'zoku', img:null, note:null, k:'土佐の英雄・長宗我部氏が四国制覇の拠点とした山城。'},
   {n:'佐和山城', p:'滋賀', c:'bangai', img:'sawayama', note:'n83dc1539c817', k:'石田三成の居城跡。「三成に過ぎたるもの」と謳われた名城の面影。'},
   {n:'浦戸城', p:'高知', c:'bangai', img:null, note:null, k:'長宗我部氏が最後に築いた城。桂浜を見下ろす海辺の地に立つ。'},
@@ -888,9 +888,11 @@ const LS = {
   extra:'castleapp.extraVisited.v1',
   photo:n=>'castleapp.photo.'+n,
   kotoba:n=>'castleapp.kotoba.'+n,
+  note:n=>'castleapp.note.'+n,
 };
 function getPhoto(n){ return localStorage.getItem(LS.photo(n)); }
 function getKotoba(c){ return localStorage.getItem(LS.kotoba(c.n)) || c.k || ''; }
+function getNote(c){ return localStorage.getItem(LS.note(c.n)) || c.note || null; }
 
 /* ---- 都道府県 手動制覇トグル(城とは独立、一般的な旅行記録) ---- */
 function loadVisitedPref(){
@@ -990,8 +992,9 @@ function wireMapClicks(){
 
 /* ---- castle sheet ---- */
 function noteBtn(c){
-  if(!c.note) return '';
-  if(NOTE_USER) return '<a class="btn note" target="_blank" rel="noopener" href="https://note.com/'+NOTE_USER+'/n/'+c.note+'">📖 note記事を読む</a>';
+  const noteId = getNote(c);
+  if(!noteId) return '';
+  if(NOTE_USER) return '<a class="btn note" target="_blank" rel="noopener" href="https://note.com/'+NOTE_USER+'/n/'+noteId+'">📖 note記事を読む</a>';
   return '<span class="btn note off" title="上の NOTE_USER を設定し、記事を公開するとリンクが有効になります">📖 note（準備中）</span>';
 }
 function cardEl(c){
@@ -1022,9 +1025,11 @@ function cardEl(c){
   btns.innerHTML = noteBtn(c)
     + '<button class="btn add" data-act="photo">'+(src?'🖼 写真を変更':'＋写真を追加')+'</button>'
     + '<button class="btn edit" data-act="kotoba">✏️ 一言を直す</button>'
+    + '<button class="btn edit" data-act="notelink">🔗 '+(getNote(c)?'note記事のリンクを直す':'note記事をリンクする')+'</button>'
     + (c.custom?'<button class="btn danger" data-act="del">🗑 削除</button>':'');
   btns.querySelector('[data-act="photo"]').onclick=()=>pickPhoto(c.n);
   btns.querySelector('[data-act="kotoba"]').onclick=()=>editKotoba(c);
+  btns.querySelector('[data-act="notelink"]').onclick=()=>editNote(c);
   if(c.custom){ btns.querySelector('[data-act="del"]').onclick=()=>deleteCustom(c); }
   body.appendChild(btns); card.appendChild(body);
   return card;
@@ -1065,6 +1070,17 @@ function editKotoba(c){
   if(v===null) return;
   if(v.trim()==='' || v===c.k) localStorage.removeItem(LS.kotoba(c.n));
   else localStorage.setItem(LS.kotoba(c.n), v.trim());
+  refreshSheet();
+}
+function editNote(c){
+  const cur=getNote(c) || '';
+  const v=prompt(c.n+' のnote記事をリンクします。\n記事IDまたはURLを入れてください（例：n1d2f6417667d、または https://note.com/mameyuru2022/n/n1d2f6417667d ）\n空にすると解除されます。', cur);
+  if(v===null) return;
+  let id=v.trim();
+  const m=id.match(/\/n\/(n[0-9a-z]+)/i);
+  if(m) id=m[1];
+  if(id==='' || id===c.note) localStorage.removeItem(LS.note(c.n));
+  else localStorage.setItem(LS.note(c.n), id);
   refreshSheet();
 }
 function markVisited(c){
