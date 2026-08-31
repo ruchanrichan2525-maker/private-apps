@@ -15,6 +15,7 @@
     --mint:#8fd9c0; --mintbg:#e6f7f1;
     --gold:#9b72d1; --goldbg:#f1e7fa;
     --sky:#8ecfe8; --skybg:#e3f4fb;
+    --anyvisit:#ffe066; --anyvisitbg:#fffbe0;
     --grey:#efe7e1; --greytx:#c3b4aa;
     --accent:#ff8fab;
     --shadow:0 6px 18px rgba(180,140,120,.14);
@@ -138,6 +139,7 @@
       <span><i class="dot" style="background:var(--p100)"></i>100名城 制覇</span>
       <span><i class="dot" style="background:var(--pzoku)"></i>続100名城 制覇</span>
       <span><i class="dot" style="background:var(--gold)"></i>両方 制覇</span>
+      <span><i class="dot" style="background:var(--anyvisit)"></i>1城でも訪問済み</span>
       <span style="color:#b9743e">県をタップすると城の一覧（未訪問も）が見られます</span>
     </div>
     <div class="mapcard"><svg id="svgCastle" class="jpmap" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg"><title>Japanese Prefectures</title>
@@ -621,7 +623,7 @@ const CAT = {
   'bangai':{label:'番外編',       cls:'cbangai'},
 };
 
-/* 訪問済み33城の写真・note記事・一言メタデータ */
+/* 訪問済み36城の写真・note記事・一言メタデータ */
 const CASTLES = [
   {n:'多賀城', p:'宮城', c:'100', img:'tagajo', note:'n280b118137c5', k:'奈良時代、東北を治めた古代の城柵。陸奥国府と鎮守府が置かれた政治の中心。'},
   {n:'仙台城', p:'宮城', c:'100', img:'sendai', note:'n278b60a6519a', k:'伊達政宗が築いた「青葉城」。断崖の上から仙台の街を見晴らす。'},
@@ -656,6 +658,9 @@ const CASTLES = [
   {n:'岡豊城', p:'高知', c:'zoku', img:null, note:'n71df8ec41936', k:'土佐の英雄・長宗我部氏が四国制覇の拠点とした山城。'},
   {n:'佐和山城', p:'滋賀', c:'bangai', img:'sawayama', note:'n83dc1539c817', k:'石田三成の居城跡。「三成に過ぎたるもの」と謳われた名城の面影。'},
   {n:'浦戸城', p:'高知', c:'bangai', img:null, note:'n3af8b4f2744b', k:'長宗我部氏が最後に築いた城。桂浜を見下ろす海辺の地に立つ。'},
+  {n:'松代城', p:'長野', c:'100', img:'matsushiro', note:'na3acff477526', k:'武田信玄が北信濃攻略のために築いた海津城が前身。のちに真田家が十代にわたり治めた城。'},
+  {n:'上田城', p:'長野', c:'100', img:'ueda', note:'n77a1ed96560f', k:'真田昌幸が二度にわたり徳川の大軍を退けた難攻不落の城。今も石垣や櫓が残る。'},
+  {n:'小諸城', p:'長野', c:'100', img:'komoro', note:'n125c51072bbc', k:'城下町よりも低い場所に築かれた全国唯一の「穴城」。懐古園として整備されている。'},
 ];
 
 /* 日本100名城(no1-100) + 続日本100名城(no101-200) 公式リスト(日本城郭協会選定) */
@@ -965,6 +970,7 @@ function paintCastleMap(){
     if(st.gold) fill='var(--gold)';
     else if(st.complete100) fill='var(--p100)';
     else if(st.completeZoku) fill='var(--pzoku)';
+    else if(st.c100visited>0 || st.czokuvisited>0) fill='var(--anyvisit)';
     g.style.fill = fill;
   });
 }
